@@ -37,3 +37,12 @@ dist/
 build/
 *.egg-info/
 *.egg
+
+# Generated tracks
+generated_tracks/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local

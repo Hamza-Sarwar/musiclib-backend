@@ -1,0 +1,39 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { TrackListItem } from '@/lib/types';
+import { fetchSimilarTracks } from '@/lib/api';
+import TrackCard from './TrackCard';
+
+export default function SimilarTracks({ trackId }: { trackId: string }) {
+  const [tracks, setTracks] = useState<TrackListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSimilarTracks(trackId)
+      .then(setTracks)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [trackId]);
+
+  if (loading) {
+    return (
+      <div className="py-4 text-center text-sm text-zinc-500">
+        Loading similar tracks...
+      </div>
+    );
+  }
+
+  if (tracks.length === 0) return null;
+
+  return (
+    <section>
+      <h2 className="mb-4 text-lg font-semibold text-white">Similar Tracks</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {tracks.map((track) => (
+          <TrackCard key={track.id} track={track} />
+        ))}
+      </div>
+    </section>
+  );
+}

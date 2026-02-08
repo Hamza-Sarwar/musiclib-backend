@@ -1,4 +1,4 @@
-from django.db.models import F
+from django.db.models import F, Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -17,10 +17,12 @@ from .filters import TrackFilter
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for browsing and downloading tracks.
-    
+
     list: GET /api/tracks/
     retrieve: GET /api/tracks/{id}/
     download: GET /api/tracks/{id}/download/
+    play: POST /api/tracks/{id}/play/
+    similar: GET /api/tracks/{id}/similar/
     genres: GET /api/tracks/genres/
     moods: GET /api/tracks/moods/
     featured: GET /api/tracks/featured/
@@ -41,10 +43,10 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     def download(self, request, pk=None):
         """Download a track and increment the download counter."""
         track = self.get_object()
-        
+
         # Increment download count atomically
         Track.objects.filter(pk=track.pk).update(download_count=F("download_count") + 1)
-        
+
         try:
             response = FileResponse(
                 track.audio_file.open("rb"),
@@ -66,6 +68,26 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         track = self.get_object()
         Track.objects.filter(pk=track.pk).update(play_count=F("play_count") + 1)
         return Response({"status": "ok"})
+
+    @action(detail=True, methods=["get"])
+    def similar(self, request, pk=None):
+        """Return tracks with the same genre or mood, excluding self."""
+        track = self.get_object()
+        filters = Q()
+        if track.genre:
+            filters |= Q(genre=track.genre)
+        if track.mood:
+            filters |= Q(mood=track.mood)
+
+        similar = (
+            self.queryset.filter(filters)
+            .exclude(pk=track.pk)
+            .order_by("-download_count")[:10]
+        )
+        serializer = TrackListSerializer(
+            similar, many=True, context={"request": request}
+        )
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def genres(self, request):

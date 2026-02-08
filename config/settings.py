@@ -19,17 +19,20 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sitemaps",
     # Third party
     "rest_framework",
     "corsheaders",
     "django_filters",
     # Local
     "tracks",
+    "accounts",
 ]
 
 # ─── Middleware ──────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -68,9 +71,10 @@ DATABASES = {
     }
 }
 
-# Uncomment for PostgreSQL:
-# import dj_database_url
-# DATABASES = {"default": dj_database_url.parse(os.getenv("DATABASE_URL"))}
+# PostgreSQL via DATABASE_URL (production)
+if os.getenv("DATABASE_URL"):
+    import dj_database_url
+    DATABASES = {"default": dj_database_url.parse(os.getenv("DATABASE_URL"))}
 
 # ─── Auth ───────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
@@ -103,6 +107,9 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
