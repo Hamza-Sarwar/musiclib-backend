@@ -51,6 +51,8 @@ export default function WaveformPlayer({ track }: WaveformPlayerProps) {
         const listItem: TrackListItem = {
           id: track.id,
           title: track.title,
+          artist_name: (track as any).artist_name || '',
+          language: (track as any).language || 'English',
           genre_name: (track as any).genre_name || (track as any).genre?.name || null,
           mood_name: (track as any).mood_name || (track as any).mood?.name || null,
           duration: track.duration,
