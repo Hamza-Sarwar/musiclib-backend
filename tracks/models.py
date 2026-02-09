@@ -33,7 +33,14 @@ class Track(models.Model):
     genre = models.ForeignKey(Genre, on_delete=models.SET_NULL, null=True, related_name="tracks")
     mood = models.ForeignKey(Mood, on_delete=models.SET_NULL, null=True, related_name="tracks")
     tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
-    
+
+    # Artist & Language
+    artist_name = models.CharField(max_length=100, blank=True, help_text="AI artist persona name")
+    language = models.CharField(max_length=20, blank=True, default="English", help_text="Track language")
+
+    # Lyrics (optional)
+    lyrics = models.TextField(blank=True, help_text="Song lyrics or spoken word text")
+
     # Audio file
     audio_file = models.FileField(upload_to="tracks/%Y/%m/")
     

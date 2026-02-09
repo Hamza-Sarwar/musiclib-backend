@@ -1,0 +1,28 @@
+databases:
+  - name: musiclib-db
+    plan: free
+    databaseName: musiclib
+    user: musiclib
+
+services:
+  - type: web
+    name: musiclib-api
+    plan: free
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: python manage.py migrate && python manage.py seed_data 2>/dev/null; gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: musiclib-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOW_ALL
+        value: "True"
+      - key: PYTHON_VERSION
+        value: "3.12.0"

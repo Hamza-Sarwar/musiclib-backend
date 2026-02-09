@@ -10,16 +10,16 @@ export default function UserMenu() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Link
           href="/login"
-          className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition hover:text-white"
+          className="rounded-full px-3 py-1.5 text-xs text-zinc-500 transition hover:text-white"
         >
           Log in
         </Link>
         <Link
           href="/register"
-          className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-500"
+          className="rounded-full bg-violet-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-violet-500"
         >
           Sign up
         </Link>
@@ -29,10 +29,10 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-zinc-400">{user.username}</span>
+      <span className="text-xs text-zinc-500">{user.username}</span>
       <button
         onClick={logout}
-        className="rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition hover:text-white"
+        className="rounded-full px-3 py-1.5 text-xs text-zinc-500 transition hover:text-white"
       >
         Log out
       </button>

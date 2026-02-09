@@ -3,21 +3,26 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Genre, Mood } from '@/lib/types';
-import { fetchGenres, fetchMoods } from '@/lib/api';
+import { fetchGenres, fetchMoods, fetchLanguages, fetchArtists } from '@/lib/api';
 
 export default function TrackFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [moods, setMoods] = useState<Mood[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [artists, setArtists] = useState<string[]>([]);
 
   const activeGenre = searchParams.get('genre') || '';
   const activeMood = searchParams.get('mood') || '';
+  const activeLanguage = searchParams.get('language') || '';
+  const activeArtist = searchParams.get('artist') || '';
 
   useEffect(() => {
     fetchGenres().then(setGenres).catch(() => {});
     fetchMoods().then(setMoods).catch(() => {});
+    fetchLanguages().then(setLanguages).catch(() => {});
+    fetchArtists().then(setArtists).catch(() => {});
   }, []);
 
   const setFilter = (key: string, value: string) => {
@@ -31,117 +36,94 @@ export default function TrackFilters() {
     router.push(`/?${params.toString()}`);
   };
 
-  const clearAll = () => {
-    router.push('/');
-  };
+  const hasFilters = activeGenre || activeMood || activeLanguage || activeArtist;
 
-  const hasFilters = activeGenre || activeMood;
-
-  const filterContent = (
-    <div className="space-y-6">
-      {/* Genre */}
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Genre
-        </h3>
-        <div className="flex flex-wrap gap-1.5">
-          {genres.map((g) => (
+  return (
+    <div className="space-y-3">
+      {/* Language row */}
+      {languages.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-600">Language</span>
+          {languages.map((lang) => (
             <button
-              key={g.id}
-              onClick={() =>
-                setFilter('genre', activeGenre === g.slug ? '' : g.slug)
-              }
-              className={`rounded-full px-3 py-1 text-xs transition ${
-                activeGenre === g.slug
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+              key={lang}
+              onClick={() => setFilter('language', activeLanguage === lang ? '' : lang)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                activeLanguage === lang
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white'
               }`}
             >
-              {g.name}
-              {g.track_count > 0 && (
-                <span className="ml-1 text-zinc-500">({g.track_count})</span>
-              )}
+              {lang}
             </button>
           ))}
         </div>
+      )}
+
+      {/* Genre row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium uppercase tracking-wider text-zinc-600">Genre</span>
+        {genres.map((g) => (
+          <button
+            key={g.id}
+            onClick={() => setFilter('genre', activeGenre === g.slug ? '' : g.slug)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              activeGenre === g.slug
+                ? 'bg-violet-500 text-white'
+                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white'
+            }`}
+          >
+            {g.name}
+          </button>
+        ))}
       </div>
 
-      {/* Mood */}
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Mood
-        </h3>
-        <div className="flex flex-wrap gap-1.5">
-          {moods.map((m) => (
+      {/* Mood row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium uppercase tracking-wider text-zinc-600">Mood</span>
+        {moods.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setFilter('mood', activeMood === m.slug ? '' : m.slug)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              activeMood === m.slug
+                ? 'bg-fuchsia-500 text-white'
+                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white'
+            }`}
+          >
+            {m.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Artist row */}
+      {artists.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-600">Artist</span>
+          {artists.map((a) => (
             <button
-              key={m.id}
-              onClick={() =>
-                setFilter('mood', activeMood === m.slug ? '' : m.slug)
-              }
-              className={`rounded-full px-3 py-1 text-xs transition ${
-                activeMood === m.slug
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+              key={a}
+              onClick={() => setFilter('artist', activeArtist === a ? '' : a)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                activeArtist === a
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white'
               }`}
             >
-              {m.name}
-              {m.track_count > 0 && (
-                <span className="ml-1 text-zinc-500">({m.track_count})</span>
-              )}
+              {a}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {hasFilters && (
         <button
-          onClick={clearAll}
-          className="text-xs text-primary-400 transition hover:text-primary-300"
+          onClick={() => router.push('/')}
+          className="text-xs text-zinc-500 transition hover:text-white"
         >
           Clear all filters
         </button>
       )}
     </div>
-  );
-
-  return (
-    <>
-      {/* Mobile toggle */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="mb-4 flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 lg:hidden"
-      >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path d="M3 4h18M3 12h18M3 20h18" />
-        </svg>
-        Filters
-        {hasFilters && (
-          <span className="rounded-full bg-primary-600 px-1.5 py-0.5 text-xs">
-            Active
-          </span>
-        )}
-      </button>
-
-      {/* Mobile drawer */}
-      {isOpen && (
-        <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 lg:hidden">
-          {filterContent}
-        </div>
-      )}
-
-      {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-shrink-0 lg:block">
-        <div className="sticky top-20 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <h2 className="mb-4 text-sm font-semibold text-white">Filters</h2>
-          {filterContent}
-        </div>
-      </aside>
-    </>
   );
 }

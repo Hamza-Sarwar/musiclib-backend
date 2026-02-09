@@ -52,6 +52,14 @@ export async function fetchMoods(): Promise<Mood[]> {
   return apiFetch('/tracks/moods/');
 }
 
+export async function fetchLanguages(): Promise<string[]> {
+  return apiFetch('/tracks/languages/');
+}
+
+export async function fetchArtists(): Promise<string[]> {
+  return apiFetch('/tracks/artists/');
+}
+
 export async function fetchFeatured(): Promise<TrackListItem[]> {
   return apiFetch('/tracks/featured/');
 }

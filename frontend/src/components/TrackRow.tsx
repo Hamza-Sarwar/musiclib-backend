@@ -7,11 +7,9 @@ export default function TrackRow({ tracks }: { tracks: TrackListItem[] }) {
   if (tracks.length === 0) return null;
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="rounded-xl bg-zinc-900/50 py-1">
       {tracks.map((track) => (
-        <div key={track.id} className="w-64 flex-shrink-0">
-          <TrackCard track={track} />
-        </div>
+        <TrackCard key={track.id} track={track} />
       ))}
     </div>
   );

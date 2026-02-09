@@ -15,6 +15,8 @@ export interface Mood {
 export interface TrackListItem {
   id: string;
   title: string;
+  artist_name: string;
+  language: string;
   genre_name: string | null;
   mood_name: string | null;
   duration: number;
@@ -31,7 +33,10 @@ export interface TrackListItem {
 export interface TrackDetail {
   id: string;
   title: string;
+  artist_name: string;
+  language: string;
   description: string;
+  lyrics: string;
   genre: Genre | null;
   mood: Mood | null;
   tags_list: string[];

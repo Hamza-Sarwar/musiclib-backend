@@ -6,15 +6,12 @@ import { TrackListItem, PaginatedResponse } from '@/lib/types';
 import { fetchTracks, fetchFeatured, fetchPopular } from '@/lib/api';
 import TrackGrid from '@/components/TrackGrid';
 import TrackFilters from '@/components/TrackFilters';
-import TrackRow from '@/components/TrackRow';
-import SectionHeader from '@/components/SectionHeader';
 import Pagination from '@/components/Pagination';
+import TrackCard from '@/components/TrackCard';
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const [data, setData] = useState<PaginatedResponse<TrackListItem> | null>(
-    null
-  );
+  const [data, setData] = useState<PaginatedResponse<TrackListItem> | null>(null);
   const [featured, setFeatured] = useState<TrackListItem[]>([]);
   const [popular, setPopular] = useState<TrackListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,53 +46,84 @@ function HomeContent() {
   }, [searchParams]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      {/* Featured sections - only when no filters active */}
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      {/* Hero - only on default view */}
+      {!hasFilters && (
+        <section className="pb-8 pt-12 text-center">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Free{' '}
+            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              AI-Generated
+            </span>{' '}
+            Music
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm text-zinc-500">
+            Download royalty-free background music for your videos, podcasts, and projects. No attribution required.
+          </p>
+        </section>
+      )}
+
+      {/* Featured - compact */}
       {!hasFilters && featured.length > 0 && (
         <section className="mb-8">
-          <SectionHeader title="New This Week" href="/?ordering=-created_at" />
-          <TrackRow tracks={featured} />
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            Featured
+          </h2>
+          <div className="rounded-xl bg-zinc-900/50 py-1">
+            {featured.slice(0, 5).map((track) => (
+              <TrackCard key={track.id} track={track} />
+            ))}
+          </div>
         </section>
       )}
 
+      {/* Popular - compact */}
       {!hasFilters && popular.length > 0 && (
         <section className="mb-8">
-          <SectionHeader
-            title="Popular"
-            href="/?ordering=-download_count"
-          />
-          <TrackRow tracks={popular} />
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            Popular
+          </h2>
+          <div className="rounded-xl bg-zinc-900/50 py-1">
+            {popular.slice(0, 5).map((track) => (
+              <TrackCard key={track.id} track={track} />
+            ))}
+          </div>
         </section>
       )}
 
-      <div className="flex flex-col gap-6 lg:flex-row">
+      {/* Filters */}
+      <section className="mb-6">
         <TrackFilters />
-        <div className="flex-1">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-white">
-              {searchParams.get('search')
-                ? `Results for "${searchParams.get('search')}"`
-                : 'All Tracks'}
-            </h1>
-            {data && (
-              <span className="text-sm text-zinc-500">
-                {data.count} track{data.count !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
+      </section>
 
-          {loading ? (
-            <div className="py-20 text-center text-zinc-500">
-              Loading tracks...
-            </div>
-          ) : (
-            <>
-              <TrackGrid tracks={data?.results || []} />
-              {data && <Pagination count={data.count} />}
-            </>
+      {/* All Tracks */}
+      <section className="pb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-zinc-300">
+            {searchParams.get('search')
+              ? `Results for "${searchParams.get('search')}"`
+              : 'All Tracks'}
+          </h2>
+          {data && (
+            <span className="text-xs text-zinc-600">
+              {data.count} track{data.count !== 1 ? 's' : ''}
+            </span>
           )}
         </div>
-      </div>
+
+        {loading ? (
+          <div className="py-16 text-center text-sm text-zinc-600">
+            Loading...
+          </div>
+        ) : (
+          <>
+            <div className="rounded-xl bg-zinc-900/30 py-1">
+              <TrackGrid tracks={data?.results || []} />
+            </div>
+            {data && <Pagination count={data.count} />}
+          </>
+        )}
+      </section>
     </div>
   );
 }
@@ -104,7 +132,7 @@ export default function HomePage() {
   return (
     <Suspense
       fallback={
-        <div className="py-20 text-center text-zinc-500">Loading...</div>
+        <div className="py-20 text-center text-sm text-zinc-600">Loading...</div>
       }
     >
       <HomeContent />

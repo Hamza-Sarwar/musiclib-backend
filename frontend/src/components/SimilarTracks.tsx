@@ -18,7 +18,7 @@ export default function SimilarTracks({ trackId }: { trackId: string }) {
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-sm text-zinc-500">
+      <div className="py-4 text-center text-sm text-zinc-600">
         Loading similar tracks...
       </div>
     );
@@ -28,8 +28,10 @@ export default function SimilarTracks({ trackId }: { trackId: string }) {
 
   return (
     <section>
-      <h2 className="mb-4 text-lg font-semibold text-white">Similar Tracks</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-600">
+        Similar Tracks
+      </h2>
+      <div className="rounded-xl bg-zinc-900/30 py-1">
         {tracks.map((track) => (
           <TrackCard key={track.id} track={track} />
         ))}

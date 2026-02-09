@@ -35,7 +35,7 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="relative max-w-md">
+    <div className="relative max-w-sm">
       <svg
         className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
         fill="none"
@@ -51,7 +51,7 @@ export default function SearchBar() {
         value={value}
         onChange={handleChange}
         placeholder="Search tracks..."
-        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
+        className="w-full rounded-full bg-zinc-900 py-2 pl-10 pr-4 text-sm text-white placeholder-zinc-600 outline-none transition focus:bg-zinc-800 focus:ring-1 focus:ring-violet-500/50"
       />
     </div>
   );

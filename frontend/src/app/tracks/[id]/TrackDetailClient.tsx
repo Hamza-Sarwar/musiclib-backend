@@ -19,6 +19,8 @@ export default function TrackDetailClient({ track }: { track: TrackDetail }) {
       play({
         id: track.id,
         title: track.title,
+        artist_name: track.artist_name,
+        language: track.language,
         genre_name: track.genre?.name || null,
         mood_name: track.mood?.name || null,
         duration: track.duration,
@@ -35,23 +37,33 @@ export default function TrackDetailClient({ track }: { track: TrackDetail }) {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      {/* Header */}
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      {/* Title area */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           {track.title}
         </h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {track.genre && (
-            <span className="rounded-full bg-primary-900/50 px-3 py-1 text-xs font-medium text-primary-300">
-              {track.genre.name}
-            </span>
+        {track.artist_name && (
+          <p className="mt-1 text-base text-violet-400">{track.artist_name}</p>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
+          {track.genre && <span>{track.genre.name}</span>}
+          {track.genre && track.mood && <span className="text-zinc-700">/</span>}
+          {track.mood && <span>{track.mood.name}</span>}
+          {track.language && track.language !== 'English' && (
+            <>
+              <span className="text-zinc-800">|</span>
+              <span className="text-violet-400/70">{track.language}</span>
+            </>
           )}
-          {track.mood && (
-            <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-300">
-              {track.mood.name}
-            </span>
+          {track.bpm && (
+            <>
+              <span className="text-zinc-800">|</span>
+              <span>{track.bpm} BPM</span>
+            </>
           )}
+          <span className="text-zinc-800">|</span>
+          <span>{track.duration_display}</span>
         </div>
       </div>
 
@@ -67,14 +79,14 @@ export default function TrackDetailClient({ track }: { track: TrackDetail }) {
       </div>
 
       {/* Actions */}
-      <div className="mb-8 flex flex-wrap gap-3">
+      <div className="mb-8 flex items-center gap-3">
         <button
           onClick={handlePlay}
-          className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-primary-500"
+          className="flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-zinc-950 transition hover:scale-105"
         >
           {isCurrentlyPlaying ? (
             <>
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <rect x="6" y="4" width="4" height="16" />
                 <rect x="14" y="4" width="4" height="16" />
               </svg>
@@ -82,7 +94,7 @@ export default function TrackDetailClient({ track }: { track: TrackDetail }) {
             </>
           ) : (
             <>
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <polygon points="5,3 19,12 5,21" />
               </svg>
               Play
@@ -91,70 +103,65 @@ export default function TrackDetailClient({ track }: { track: TrackDetail }) {
         </button>
         <a
           href={getDownloadUrl(track.id)}
-          className="flex items-center gap-2 rounded-lg border border-zinc-700 px-6 py-2.5 text-sm font-medium text-white transition hover:border-zinc-500"
+          className="flex items-center gap-2 rounded-full border border-zinc-800 px-6 py-2.5 text-sm font-medium text-white transition hover:border-zinc-600"
         >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
           </svg>
           Download
+          <span className="text-zinc-500">{formatFileSize(track.file_size)}</span>
         </a>
       </div>
 
-      {/* Info Grid */}
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-500">Duration</p>
-          <p className="text-lg font-semibold text-white">
-            {track.duration_display}
-          </p>
+      {/* Stats row */}
+      <div className="mb-8 flex gap-6 text-sm">
+        <div>
+          <span className="text-zinc-600">Plays</span>
+          <span className="ml-2 font-medium text-white">{track.play_count.toLocaleString()}</span>
         </div>
-        {track.bpm && (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-            <p className="text-xs text-zinc-500">BPM</p>
-            <p className="text-lg font-semibold text-white">{track.bpm}</p>
-          </div>
-        )}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-500">Downloads</p>
-          <p className="text-lg font-semibold text-white">
-            {track.download_count.toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-500">File Size</p>
-          <p className="text-lg font-semibold text-white">
-            {formatFileSize(track.file_size)}
-          </p>
+        <div>
+          <span className="text-zinc-600">Downloads</span>
+          <span className="ml-2 font-medium text-white">{track.download_count.toLocaleString()}</span>
         </div>
       </div>
 
       {/* Description */}
       {track.description && (
-        <div className="mb-8">
-          <h2 className="mb-2 text-sm font-semibold text-zinc-400">
-            Description
+        <div className="mb-6">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-600">
+            About
           </h2>
-          <p className="text-sm leading-relaxed text-zinc-300">
+          <p className="text-sm leading-relaxed text-zinc-400">
             {track.description}
           </p>
+        </div>
+      )}
+
+      {/* Lyrics */}
+      {track.lyrics && (
+        <div className="mb-6">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-600">
+            Lyrics
+          </h2>
+          <div className="rounded-xl bg-zinc-900/50 p-5">
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-zinc-300">
+              {track.lyrics}
+            </pre>
+          </div>
         </div>
       )}
 
       {/* Tags */}
       {track.tags_list.length > 0 && (
         <div className="mb-8">
-          <h2 className="mb-2 text-sm font-semibold text-zinc-400">Tags</h2>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-600">
+            Tags
+          </h2>
           <div className="flex flex-wrap gap-2">
             {track.tags_list.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-300"
+                className="rounded-full bg-zinc-900 px-3 py-1 text-xs text-zinc-400"
               >
                 {tag}
               </span>

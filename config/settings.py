@@ -93,6 +93,7 @@ USE_TZ = True
 # ─── Static & Media ────────────────────────────────────
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -115,14 +116,17 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
+        "anon": "1000/hour",
     },
 }
 
 # ─── CORS ───────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
-    os.getenv("FRONTEND_URL", "http://localhost:3000"),
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", os.getenv("FRONTEND_URL", "http://localhost:3000")).split(",")
+    if origin.strip()
 ]
+CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL", "False") == "True"
 
 # ─── JWT (for Phase 2 - user auth) ─────────────────────
 SIMPLE_JWT = {

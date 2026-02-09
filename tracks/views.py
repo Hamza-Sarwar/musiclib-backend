@@ -104,6 +104,28 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
+    def languages(self, request):
+        """List distinct languages."""
+        langs = (
+            self.queryset.exclude(language="")
+            .values_list("language", flat=True)
+            .distinct()
+            .order_by("language")
+        )
+        return Response(list(langs))
+
+    @action(detail=False, methods=["get"])
+    def artists(self, request):
+        """List distinct artist names."""
+        artists = (
+            self.queryset.exclude(artist_name="")
+            .values_list("artist_name", flat=True)
+            .distinct()
+            .order_by("artist_name")
+        )
+        return Response(list(artists))
+
+    @action(detail=False, methods=["get"])
     def featured(self, request):
         """List featured tracks."""
         tracks = self.queryset.filter(is_featured=True)[:10]

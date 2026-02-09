@@ -25,9 +25,9 @@ export default function WaveformPlayer({ track }: WaveformPlayerProps) {
 
       ws = WaveSurfer.create({
         container: containerRef.current!,
-        waveColor: '#52525b',
-        progressColor: '#6366f1',
-        cursorColor: '#a5b4fc',
+        waveColor: '#3f3f46',
+        progressColor: '#8b5cf6',
+        cursorColor: '#c4b5fd',
         cursorWidth: 2,
         height: 80,
         barWidth: 2,
@@ -48,7 +48,6 @@ export default function WaveformPlayer({ track }: WaveformPlayerProps) {
       ws.on('ready', () => setReady(true));
 
       ws.on('click', (relativeX: number) => {
-        // Use the player context to control playback
         const listItem: TrackListItem = {
           id: track.id,
           title: track.title,
@@ -80,7 +79,6 @@ export default function WaveformPlayer({ track }: WaveformPlayerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track.id]);
 
-  // Sync visual position with PlayerContext
   useEffect(() => {
     if (wavesurferRef.current && ready && isActive && track.duration > 0) {
       const pct = currentTime / track.duration;
@@ -89,10 +87,10 @@ export default function WaveformPlayer({ track }: WaveformPlayerProps) {
   }, [currentTime, isActive, ready, track.duration]);
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+    <div className="rounded-xl bg-zinc-900/50 p-4">
       <div ref={containerRef} className="w-full" />
       {!ready && (
-        <div className="flex h-20 items-center justify-center text-sm text-zinc-500">
+        <div className="flex h-20 items-center justify-center text-sm text-zinc-600">
           Loading waveform...
         </div>
       )}

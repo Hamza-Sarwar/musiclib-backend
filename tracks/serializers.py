@@ -35,7 +35,8 @@ class TrackListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Track
         fields = [
-            "id", "title", "genre_name", "mood_name",
+            "id", "title", "artist_name", "language",
+            "genre_name", "mood_name",
             "duration", "duration_display", "bpm",
             "download_count", "play_count",
             "audio_url", "file_size",
@@ -61,7 +62,8 @@ class TrackDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Track
         fields = [
-            "id", "title", "description",
+            "id", "title", "artist_name", "language",
+            "description", "lyrics",
             "genre", "mood", "tags_list",
             "duration", "duration_display", "bpm",
             "download_count", "play_count",
