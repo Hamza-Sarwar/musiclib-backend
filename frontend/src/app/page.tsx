@@ -8,13 +8,18 @@ import TrackGrid from '@/components/TrackGrid';
 import TrackFilters from '@/components/TrackFilters';
 import Pagination from '@/components/Pagination';
 import TrackCard from '@/components/TrackCard';
+import LandingPage from '@/components/LandingPage';
+import { useAuth } from '@/contexts/AuthContext';
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const { user, isLoading: authLoading } = useAuth();
   const [data, setData] = useState<PaginatedResponse<TrackListItem> | null>(null);
   const [featured, setFeatured] = useState<TrackListItem[]>([]);
   const [popular, setPopular] = useState<TrackListItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const browseMode = searchParams.get('browse') === 'true';
 
   const hasFilters =
     searchParams.get('genre') ||
@@ -22,7 +27,11 @@ function HomeContent() {
     searchParams.get('search') ||
     searchParams.get('page');
 
+  // Show landing page for unauthenticated users who haven't clicked "Browse"
+  const showLanding = !authLoading && !user && !browseMode && !hasFilters;
+
   useEffect(() => {
+    if (showLanding) return;
     if (!hasFilters) {
       Promise.all([fetchFeatured(), fetchPopular()])
         .then(([f, p]) => {
@@ -31,19 +40,33 @@ function HomeContent() {
         })
         .catch(() => {});
     }
-  }, [hasFilters]);
+  }, [hasFilters, showLanding]);
 
   useEffect(() => {
+    if (showLanding) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const params: Record<string, string> = {};
     searchParams.forEach((value, key) => {
-      params[key] = value;
+      if (key !== 'browse') params[key] = value;
     });
     fetchTracks(params)
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [searchParams]);
+  }, [searchParams, showLanding]);
+
+  if (authLoading) {
+    return (
+      <div className="py-20 text-center text-sm text-zinc-600">Loading...</div>
+    );
+  }
+
+  if (showLanding) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">

@@ -42,7 +42,7 @@ class Track(models.Model):
     lyrics = models.TextField(blank=True, help_text="Song lyrics or spoken word text")
 
     # Audio file
-    audio_file = models.FileField(upload_to="tracks/%Y/%m/")
+    audio_file = models.FileField(upload_to="tracks/%Y/%m/", blank=True)
     
     # Metadata
     duration = models.PositiveIntegerField(help_text="Duration in seconds", default=0)
