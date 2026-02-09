@@ -48,23 +48,33 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         """Download a track and increment the download counter."""
         track = self.get_object()
 
-        # Increment download count atomically
-        Track.objects.filter(pk=track.pk).update(download_count=F("download_count") + 1)
+        if not track.audio_file:
+            return Response(
+                {"error": "No audio file available"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         try:
-            response = FileResponse(
-                track.audio_file.open("rb"),
-                content_type="audio/mpeg",
-            )
-            # Clean filename
-            filename = f"{track.title.replace(' ', '_')}.mp3"
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
+            file = track.audio_file.open("rb")
         except FileNotFoundError:
             return Response(
                 {"error": "File not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        # Increment download count atomically
+        Track.objects.filter(pk=track.pk).update(download_count=F("download_count") + 1)
+
+        # Detect content type from extension
+        ext = os.path.splitext(track.audio_file.name)[1].lower()
+        content_types = {".wav": "audio/wav", ".mp3": "audio/mpeg", ".flac": "audio/flac"}
+        content_type = content_types.get(ext, "application/octet-stream")
+
+        response = FileResponse(file, content_type=content_type)
+        clean_title = track.title.replace(' ', '_')
+        filename = f"{clean_title}{ext or '.wav'}"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
     @action(detail=True, methods=["post"])
     def play(self, request, pk=None):
