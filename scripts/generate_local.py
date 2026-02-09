@@ -559,9 +559,8 @@ OUTPUT_DIR = "generated_tracks"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-def generate(duration_seconds=60, count=None, resume=False):
+def generate(duration_seconds=28, count=None, resume=False):
     import torch
-    import numpy as np
     from transformers import AutoProcessor, MusicgenForConditionalGeneration
     import scipy.io.wavfile
 
@@ -583,18 +582,14 @@ def generate(duration_seconds=60, count=None, resume=False):
     model = model.to(device)
     print("Model loaded!")
 
-    # MusicGen-small max is ~30s per generation. For longer tracks,
-    # generate multiple 25s chunks and concatenate with crossfade.
-    CHUNK_SECONDS = 25
-    chunk_tokens = int(CHUNK_SECONDS * 51.2)
-    num_chunks = max(1, (duration_seconds + CHUNK_SECONDS - 1) // CHUNK_SECONDS)
-
+    # MusicGen-small hard limit is ~30s. Using 28s for safety.
+    max_tokens = int(duration_seconds * 51.2)
     prompts = TRACK_PROMPTS[:count] if count else TRACK_PROMPTS
     generated = 0
     total_to_gen = sum(1 for p in prompts if p["title"] not in existing_titles)
 
-    print(f"Will generate {total_to_gen} tracks (~{duration_seconds}s each, {num_chunks} chunks of {CHUNK_SECONDS}s)")
-    est_minutes = total_to_gen * num_chunks * 5  # ~5 min per 25s chunk on CPU
+    print(f"Will generate {total_to_gen} tracks ({duration_seconds}s each, single pass)")
+    est_minutes = total_to_gen * 8  # ~8 min per 28s track on CPU
     print(f"Estimated time: ~{est_minutes} minutes on CPU\n")
 
     for i, track_info in enumerate(prompts):
@@ -609,43 +604,21 @@ def generate(duration_seconds=60, count=None, resume=False):
         print(f"   Prompt: {track_info['prompt'][:80]}...")
 
         try:
+            inputs = processor(
+                text=[track_info["prompt"]],
+                padding=True,
+                return_tensors="pt",
+            ).to(device)
+
+            audio_values = model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                do_sample=True,
+                guidance_scale=3.0,
+            )
+
             sampling_rate = model.config.audio_encoder.sampling_rate
-            audio_chunks = []
-
-            for chunk_idx in range(num_chunks):
-                print(f"   Chunk {chunk_idx + 1}/{num_chunks}...", end=" ", flush=True)
-
-                inputs = processor(
-                    text=[track_info["prompt"]],
-                    padding=True,
-                    return_tensors="pt",
-                ).to(device)
-
-                audio_values = model.generate(
-                    **inputs,
-                    max_new_tokens=chunk_tokens,
-                    do_sample=True,
-                    guidance_scale=3.0,
-                )
-
-                chunk_data = audio_values[0, 0].cpu().numpy()
-                audio_chunks.append(chunk_data)
-                chunk_dur = len(chunk_data) / sampling_rate
-                print(f"{chunk_dur:.1f}s", flush=True)
-
-            # Concatenate chunks with crossfade
-            if len(audio_chunks) == 1:
-                audio_data = audio_chunks[0]
-            else:
-                crossfade_samples = int(sampling_rate * 2)  # 2s crossfade
-                audio_data = audio_chunks[0]
-                for chunk in audio_chunks[1:]:
-                    overlap = min(crossfade_samples, len(audio_data), len(chunk))
-                    fade_out = np.linspace(1.0, 0.0, overlap).astype(np.float32)
-                    fade_in = np.linspace(0.0, 1.0, overlap).astype(np.float32)
-                    # Crossfade the overlapping region
-                    crossfaded = audio_data[-overlap:] * fade_out + chunk[:overlap] * fade_in
-                    audio_data = np.concatenate([audio_data[:-overlap], crossfaded, chunk[overlap:]])
+            audio_data = audio_values[0, 0].cpu().numpy()
 
             base_name = f"{track_info['genre']}_{track_info['title'].lower().replace(' ', '_')}"
             wav_filename = f"{base_name}.wav"
