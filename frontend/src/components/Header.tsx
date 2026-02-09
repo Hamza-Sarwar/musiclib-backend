@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
@@ -14,7 +15,9 @@ export default function Header() {
           </span>
         </Link>
         <div className="flex-1">
-          <SearchBar />
+          <Suspense fallback={<div className="h-9" />}>
+            <SearchBar />
+          </Suspense>
         </div>
         <UserMenu />
       </div>
