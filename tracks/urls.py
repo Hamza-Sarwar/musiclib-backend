@@ -6,6 +6,6 @@ router = DefaultRouter()
 router.register(r"tracks", TrackViewSet, basename="track")
 
 urlpatterns = [
-    path("", include(router.urls)),
     path("tracks/upload-audio/", upload_audio, name="upload-audio"),
+    path("", include(router.urls)),
 ]
