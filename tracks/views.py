@@ -1,6 +1,10 @@
+import os
+
+from django.conf import settings
 from django.db.models import F, Q
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from django.http import FileResponse
 
@@ -138,3 +142,42 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         tracks = self.queryset.order_by("-download_count")[:20]
         serializer = TrackListSerializer(tracks, many=True, context={"request": request})
         return Response(serializer.data)
+
+
+@api_view(["POST"])
+def upload_audio(request):
+    """Upload audio file for a track (protected by UPLOAD_SECRET)."""
+    secret = request.headers.get("X-Upload-Secret", "")
+    expected = os.environ.get("UPLOAD_SECRET", "")
+    if not expected or secret != expected:
+        return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+    title = request.data.get("title")
+    audio = request.FILES.get("audio")
+    if not title or not audio:
+        return Response({"error": "title and audio required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Find or create track
+    track = Track.objects.filter(title=title).first()
+    if not track:
+        genre_slug = request.data.get("genre", "")
+        mood_slug = request.data.get("mood", "")
+        genre = Genre.objects.filter(slug=genre_slug).first()
+        mood = Mood.objects.filter(slug=mood_slug).first()
+        track = Track.objects.create(
+            title=title,
+            artist_name=request.data.get("artist_name", ""),
+            language=request.data.get("language", "English"),
+            genre=genre,
+            mood=mood,
+            bpm=int(request.data.get("bpm", 0)) or None,
+            duration=int(request.data.get("duration", 28)),
+            lyrics=request.data.get("lyrics", ""),
+            description=request.data.get("description", ""),
+            tags=f"{genre_slug}, {mood_slug}",
+            is_active=True,
+        )
+
+    track.audio_file = audio
+    track.save()
+    return Response({"status": "ok", "id": str(track.id), "title": track.title})
