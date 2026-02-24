@@ -35,8 +35,13 @@ class Track(models.Model):
     tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
     
     # Audio file
-    audio_file = models.FileField(upload_to="tracks/%Y/%m/")
-    
+    audio_file = models.FileField(upload_to="tracks/%Y/%m/", blank=True)
+
+    # Extra metadata
+    lyrics = models.TextField(blank=True, help_text="Song lyrics or spoken word text")
+    artist_name = models.CharField(max_length=100, blank=True, help_text="AI artist persona name")
+    language = models.CharField(max_length=20, blank=True, default="English", help_text="Track language")
+
     # Metadata
     duration = models.PositiveIntegerField(help_text="Duration in seconds", default=0)
     bpm = models.PositiveIntegerField(null=True, blank=True, help_text="Beats per minute")
