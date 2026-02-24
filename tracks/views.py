@@ -1,7 +1,14 @@
+import io
+import math
 import mimetypes
 import os
+import random
 import re
+import struct
+import wave
 
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db.models import F
 from django.http import FileResponse, StreamingHttpResponse
 from rest_framework import viewsets, status
@@ -16,6 +23,20 @@ from .serializers import (
     MoodSerializer,
 )
 from .filters import TrackFilter
+
+
+def _generate_wav(duration_sec=10, sample_rate=22050, freq=440.0):
+    """Generate a simple sine-wave WAV file in memory."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        for i in range(sample_rate * duration_sec):
+            sample = int(16000 * math.sin(2 * math.pi * freq * i / sample_rate))
+            wf.writeframes(struct.pack("<h", sample))
+    buf.seek(0)
+    return buf.read()
 
 
 def _get_audio_content_type(filename):
@@ -165,3 +186,67 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         tracks = self.queryset.order_by("-download_count")[:20]
         serializer = TrackListSerializer(tracks, many=True, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=["post"])
+    def seed(self, request):
+        """Create sample tracks. Protected by SEED_API_KEY."""
+        seed_key = os.getenv("SEED_API_KEY", "")
+        provided_key = request.headers.get("X-Seed-Key", "")
+        if not seed_key or provided_key != seed_key:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        count = min(int(request.data.get("count", 5)), 20)
+
+        SAMPLE_TRACKS = [
+            {"title": "Midnight Drive", "genre": "Lo-Fi", "mood": "Chill", "tags": "lofi,chill,night,drive", "bpm": 85, "duration": 12, "freq": 330},
+            {"title": "Neon Pulse", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,synth,upbeat", "bpm": 128, "duration": 10, "freq": 440},
+            {"title": "Autumn Leaves", "genre": "Acoustic", "mood": "Calm", "tags": "acoustic,guitar,peaceful", "bpm": 72, "duration": 14, "freq": 294},
+            {"title": "Urban Groove", "genre": "Hip Hop", "mood": "Energetic", "tags": "hiphop,beat,urban,groove", "bpm": 95, "duration": 11, "freq": 370},
+            {"title": "Starlight Serenade", "genre": "Ambient", "mood": "Dreamy", "tags": "ambient,space,dreamy", "bpm": 60, "duration": 15, "freq": 262},
+            {"title": "Electric Sunset", "genre": "Electronic", "mood": "Chill", "tags": "electronic,sunset,mellow", "bpm": 110, "duration": 10, "freq": 392},
+            {"title": "Morning Coffee", "genre": "Jazz", "mood": "Calm", "tags": "jazz,morning,smooth", "bpm": 80, "duration": 13, "freq": 350},
+            {"title": "Thunder Road", "genre": "Rock", "mood": "Energetic", "tags": "rock,guitar,powerful", "bpm": 140, "duration": 10, "freq": 494},
+            {"title": "Ocean Whisper", "genre": "Ambient", "mood": "Calm", "tags": "ambient,ocean,waves,relax", "bpm": 55, "duration": 16, "freq": 247},
+            {"title": "City Lights", "genre": "Lo-Fi", "mood": "Dreamy", "tags": "lofi,city,night,chill", "bpm": 78, "duration": 12, "freq": 311},
+            {"title": "Solar Flare", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,intense,dance", "bpm": 135, "duration": 10, "freq": 523},
+            {"title": "Rainy Window", "genre": "Acoustic", "mood": "Melancholy", "tags": "acoustic,rain,sad,piano", "bpm": 65, "duration": 14, "freq": 277},
+            {"title": "Bass Drop", "genre": "Hip Hop", "mood": "Energetic", "tags": "hiphop,bass,heavy,beat", "bpm": 100, "duration": 10, "freq": 220},
+            {"title": "Velvet Moon", "genre": "Jazz", "mood": "Dreamy", "tags": "jazz,night,smooth,sax", "bpm": 70, "duration": 13, "freq": 330},
+            {"title": "Crystal Cave", "genre": "Ambient", "mood": "Calm", "tags": "ambient,crystal,ethereal", "bpm": 50, "duration": 15, "freq": 523},
+        ]
+
+        random.shuffle(SAMPLE_TRACKS)
+        created = []
+
+        for item in SAMPLE_TRACKS[:count]:
+            genre, _ = Genre.objects.get_or_create(
+                name=item["genre"],
+                defaults={"slug": item["genre"].lower().replace(" ", "-")},
+            )
+            mood, _ = Mood.objects.get_or_create(
+                name=item["mood"],
+                defaults={"slug": item["mood"].lower().replace(" ", "-")},
+            )
+
+            wav_data = _generate_wav(
+                duration_sec=item["duration"],
+                freq=item["freq"],
+            )
+
+            track = Track(
+                title=item["title"],
+                genre=genre,
+                mood=mood,
+                tags=item["tags"],
+                bpm=item["bpm"],
+                duration=item["duration"],
+            )
+            track.audio_file.save(
+                f"{item['title'].lower().replace(' ', '_')}.wav",
+                ContentFile(wav_data),
+                save=False,
+            )
+            track.save()
+            created.append(track.title)
+
+        return Response({"created": created, "count": len(created)})

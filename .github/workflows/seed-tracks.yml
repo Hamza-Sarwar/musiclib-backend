@@ -1,0 +1,29 @@
+name: Seed Tracks
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"  # Every 3 hours
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Seed tracks via API
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.API_BASE_URL }}/api/tracks/seed/" \
+            -H "X-Seed-Key: ${{ secrets.SEED_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"count": 5}')
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Seed request failed with status $http_code"
+            exit 1
+          fi
