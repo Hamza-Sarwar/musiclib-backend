@@ -27,18 +27,18 @@ from .filters import TrackFilter
 
 def _generate_wav(duration_sec=5, sample_rate=22050, freq=440.0):
     """Generate a simple sine-wave WAV file in memory."""
+    import array
     num_samples = sample_rate * duration_sec
-    samples = struct.pack(
-        f"<{num_samples}h",
-        *(int(16000 * math.sin(2 * math.pi * freq * i / sample_rate))
-          for i in range(num_samples)),
-    )
+    samples = array.array("h", (
+        int(16000 * math.sin(2 * math.pi * freq * i / sample_rate))
+        for i in range(num_samples)
+    ))
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(sample_rate)
-        wf.writeframes(samples)
+        wf.writeframes(samples.tobytes())
     buf.seek(0)
     return buf.read()
 
@@ -190,6 +190,11 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         tracks = self.queryset.order_by("-download_count")[:20]
         serializer = TrackListSerializer(tracks, many=True, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def ping(self, request):
+        """Health check that confirms latest deploy."""
+        return Response({"status": "ok", "version": "v2"})
 
     @action(detail=False, methods=["post"])
     def seed(self, request):
