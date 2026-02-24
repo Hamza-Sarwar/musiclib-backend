@@ -199,13 +199,13 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         if not seed_key or provided_key != seed_key:
             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
-        count = min(int(request.data.get("count", 5)), 20)
-
         try:
+            count = min(int(request.data.get("count", 5)), 20)
             return self._do_seed(count)
         except Exception as e:
+            import traceback
             return Response(
-                {"error": str(e), "type": type(e).__name__},
+                {"error": str(e), "type": type(e).__name__, "trace": traceback.format_exc()},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
