@@ -197,6 +197,15 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
 
         count = min(int(request.data.get("count", 5)), 20)
 
+        try:
+            return self._do_seed(count)
+        except Exception as e:
+            return Response(
+                {"error": str(e), "type": type(e).__name__},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _do_seed(self, count):
         SAMPLE_TRACKS = [
             {"title": "Midnight Drive", "genre": "Lo-Fi", "mood": "Chill", "tags": "lofi,chill,night,drive", "bpm": 85, "duration": 12, "freq": 330},
             {"title": "Neon Pulse", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,synth,upbeat", "bpm": 128, "duration": 10, "freq": 440},
