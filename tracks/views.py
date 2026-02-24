@@ -25,16 +25,20 @@ from .serializers import (
 from .filters import TrackFilter
 
 
-def _generate_wav(duration_sec=10, sample_rate=22050, freq=440.0):
+def _generate_wav(duration_sec=5, sample_rate=22050, freq=440.0):
     """Generate a simple sine-wave WAV file in memory."""
+    num_samples = sample_rate * duration_sec
+    samples = struct.pack(
+        f"<{num_samples}h",
+        *(int(16000 * math.sin(2 * math.pi * freq * i / sample_rate))
+          for i in range(num_samples)),
+    )
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(sample_rate)
-        for i in range(sample_rate * duration_sec):
-            sample = int(16000 * math.sin(2 * math.pi * freq * i / sample_rate))
-            wf.writeframes(struct.pack("<h", sample))
+        wf.writeframes(samples)
     buf.seek(0)
     return buf.read()
 
@@ -207,21 +211,21 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _do_seed(self, count):
         SAMPLE_TRACKS = [
-            {"title": "Midnight Drive", "genre": "Lo-Fi", "mood": "Chill", "tags": "lofi,chill,night,drive", "bpm": 85, "duration": 12, "freq": 330},
-            {"title": "Neon Pulse", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,synth,upbeat", "bpm": 128, "duration": 10, "freq": 440},
-            {"title": "Autumn Leaves", "genre": "Acoustic", "mood": "Calm", "tags": "acoustic,guitar,peaceful", "bpm": 72, "duration": 14, "freq": 294},
-            {"title": "Urban Groove", "genre": "Hip Hop", "mood": "Energetic", "tags": "hiphop,beat,urban,groove", "bpm": 95, "duration": 11, "freq": 370},
-            {"title": "Starlight Serenade", "genre": "Ambient", "mood": "Dreamy", "tags": "ambient,space,dreamy", "bpm": 60, "duration": 15, "freq": 262},
-            {"title": "Electric Sunset", "genre": "Electronic", "mood": "Chill", "tags": "electronic,sunset,mellow", "bpm": 110, "duration": 10, "freq": 392},
-            {"title": "Morning Coffee", "genre": "Jazz", "mood": "Calm", "tags": "jazz,morning,smooth", "bpm": 80, "duration": 13, "freq": 350},
-            {"title": "Thunder Road", "genre": "Rock", "mood": "Energetic", "tags": "rock,guitar,powerful", "bpm": 140, "duration": 10, "freq": 494},
-            {"title": "Ocean Whisper", "genre": "Ambient", "mood": "Calm", "tags": "ambient,ocean,waves,relax", "bpm": 55, "duration": 16, "freq": 247},
-            {"title": "City Lights", "genre": "Lo-Fi", "mood": "Dreamy", "tags": "lofi,city,night,chill", "bpm": 78, "duration": 12, "freq": 311},
-            {"title": "Solar Flare", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,intense,dance", "bpm": 135, "duration": 10, "freq": 523},
-            {"title": "Rainy Window", "genre": "Acoustic", "mood": "Melancholy", "tags": "acoustic,rain,sad,piano", "bpm": 65, "duration": 14, "freq": 277},
-            {"title": "Bass Drop", "genre": "Hip Hop", "mood": "Energetic", "tags": "hiphop,bass,heavy,beat", "bpm": 100, "duration": 10, "freq": 220},
-            {"title": "Velvet Moon", "genre": "Jazz", "mood": "Dreamy", "tags": "jazz,night,smooth,sax", "bpm": 70, "duration": 13, "freq": 330},
-            {"title": "Crystal Cave", "genre": "Ambient", "mood": "Calm", "tags": "ambient,crystal,ethereal", "bpm": 50, "duration": 15, "freq": 523},
+            {"title": "Midnight Drive", "genre": "Lo-Fi", "mood": "Chill", "tags": "lofi,chill,night,drive", "bpm": 85, "duration": 5, "freq": 330},
+            {"title": "Neon Pulse", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,synth,upbeat", "bpm": 128, "duration": 5, "freq": 440},
+            {"title": "Autumn Leaves", "genre": "Acoustic", "mood": "Calm", "tags": "acoustic,guitar,peaceful", "bpm": 72, "duration": 5, "freq": 294},
+            {"title": "Urban Groove", "genre": "Hip Hop", "mood": "Energetic", "tags": "hiphop,beat,urban,groove", "bpm": 95, "duration": 5, "freq": 370},
+            {"title": "Starlight Serenade", "genre": "Ambient", "mood": "Dreamy", "tags": "ambient,space,dreamy", "bpm": 60, "duration": 5, "freq": 262},
+            {"title": "Electric Sunset", "genre": "Electronic", "mood": "Chill", "tags": "electronic,sunset,mellow", "bpm": 110, "duration": 5, "freq": 392},
+            {"title": "Morning Coffee", "genre": "Jazz", "mood": "Calm", "tags": "jazz,morning,smooth", "bpm": 80, "duration": 5, "freq": 350},
+            {"title": "Thunder Road", "genre": "Rock", "mood": "Energetic", "tags": "rock,guitar,powerful", "bpm": 140, "duration": 5, "freq": 494},
+            {"title": "Ocean Whisper", "genre": "Ambient", "mood": "Calm", "tags": "ambient,ocean,waves,relax", "bpm": 55, "duration": 5, "freq": 247},
+            {"title": "City Lights", "genre": "Lo-Fi", "mood": "Dreamy", "tags": "lofi,city,night,chill", "bpm": 78, "duration": 5, "freq": 311},
+            {"title": "Solar Flare", "genre": "Electronic", "mood": "Energetic", "tags": "electronic,intense,dance", "bpm": 135, "duration": 5, "freq": 523},
+            {"title": "Rainy Window", "genre": "Acoustic", "mood": "Melancholy", "tags": "acoustic,rain,sad,piano", "bpm": 65, "duration": 5, "freq": 277},
+            {"title": "Bass Drop", "genre": "Hip Hop", "mood": "Energetic", "tags": "hiphop,bass,heavy,beat", "bpm": 100, "duration": 5, "freq": 220},
+            {"title": "Velvet Moon", "genre": "Jazz", "mood": "Dreamy", "tags": "jazz,night,smooth,sax", "bpm": 70, "duration": 5, "freq": 330},
+            {"title": "Crystal Cave", "genre": "Ambient", "mood": "Calm", "tags": "ambient,crystal,ethereal", "bpm": 50, "duration": 5, "freq": 523},
         ]
 
         random.shuffle(SAMPLE_TRACKS)
