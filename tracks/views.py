@@ -1,12 +1,12 @@
+import mimetypes
 import os
+import re
 
-from django.conf import settings
-from django.db.models import F, Q
+from django.db.models import F
+from django.http import FileResponse, StreamingHttpResponse
 from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view
-from rest_framework.parsers import MultiPartParser
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.http import FileResponse
 
 from .models import Track, Genre, Mood
 from .serializers import (
@@ -18,15 +18,20 @@ from .serializers import (
 from .filters import TrackFilter
 
 
+def _get_audio_content_type(filename):
+    """Determine content type from file extension."""
+    content_type, _ = mimetypes.guess_type(filename)
+    return content_type or "application/octet-stream"
+
+
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint for browsing and downloading tracks.
 
     list: GET /api/tracks/
     retrieve: GET /api/tracks/{id}/
+    stream: GET /api/tracks/{id}/stream/ (supports Range requests for mobile)
     download: GET /api/tracks/{id}/download/
-    play: POST /api/tracks/{id}/play/
-    similar: GET /api/tracks/{id}/similar/
     genres: GET /api/tracks/genres/
     moods: GET /api/tracks/moods/
     featured: GET /api/tracks/featured/
@@ -44,37 +49,87 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         return TrackListSerializer
 
     @action(detail=True, methods=["get"])
-    def download(self, request, pk=None):
-        """Download a track and increment the download counter."""
+    def stream(self, request, pk=None):
+        """
+        Stream a track with HTTP Range request support.
+
+        This is the endpoint mobile browsers need — they send Range headers
+        and expect 206 Partial Content responses to play audio.
+        """
         track = self.get_object()
 
-        if not track.audio_file:
-            return Response(
-                {"error": "No audio file available"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
         try:
-            file = track.audio_file.open("rb")
-        except FileNotFoundError:
+            audio_file = track.audio_file
+            file_size = audio_file.size
+            content_type = _get_audio_content_type(audio_file.name)
+        except (FileNotFoundError, ValueError):
             return Response(
                 {"error": "File not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        range_header = request.META.get("HTTP_RANGE", "")
+        range_match = re.match(r"bytes=(\d+)-(\d*)", range_header)
+
+        if range_match:
+            # Partial content (206) — required by mobile browsers
+            start = int(range_match.group(1))
+            end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+            end = min(end, file_size - 1)
+            length = end - start + 1
+
+            f = audio_file.open("rb")
+            f.seek(start)
+            data = f.read(length)
+            f.close()
+
+            response = StreamingHttpResponse(
+                iter([data]),
+                status=206,
+                content_type=content_type,
+            )
+            response["Content-Length"] = length
+            response["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+        else:
+            # Full file (200)
+            response = FileResponse(
+                audio_file.open("rb"),
+                content_type=content_type,
+            )
+            response["Content-Length"] = file_size
+
+        response["Accept-Ranges"] = "bytes"
+        response["Content-Disposition"] = "inline"
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Headers"] = "Range"
+        response["Access-Control-Expose-Headers"] = "Content-Range, Content-Length, Accept-Ranges"
+        response["Cache-Control"] = "public, max-age=86400"
+        return response
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        """Download a track and increment the download counter."""
+        track = self.get_object()
+
         # Increment download count atomically
         Track.objects.filter(pk=track.pk).update(download_count=F("download_count") + 1)
 
-        # Detect content type from extension
-        ext = os.path.splitext(track.audio_file.name)[1].lower()
-        content_types = {".wav": "audio/wav", ".mp3": "audio/mpeg", ".flac": "audio/flac"}
-        content_type = content_types.get(ext, "application/octet-stream")
-
-        response = FileResponse(file, content_type=content_type)
-        clean_title = track.title.replace(' ', '_')
-        filename = f"{clean_title}{ext or '.wav'}"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        return response
+        try:
+            content_type = _get_audio_content_type(track.audio_file.name)
+            response = FileResponse(
+                track.audio_file.open("rb"),
+                content_type=content_type,
+            )
+            # Use original file extension instead of hardcoding .mp3
+            ext = os.path.splitext(track.audio_file.name)[1] or ".mp3"
+            filename = f"{track.title.replace(' ', '_')}{ext}"
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+        except FileNotFoundError:
+            return Response(
+                {"error": "File not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
     @action(detail=True, methods=["post"])
     def play(self, request, pk=None):
@@ -82,26 +137,6 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         track = self.get_object()
         Track.objects.filter(pk=track.pk).update(play_count=F("play_count") + 1)
         return Response({"status": "ok"})
-
-    @action(detail=True, methods=["get"])
-    def similar(self, request, pk=None):
-        """Return tracks with the same genre or mood, excluding self."""
-        track = self.get_object()
-        filters = Q()
-        if track.genre:
-            filters |= Q(genre=track.genre)
-        if track.mood:
-            filters |= Q(mood=track.mood)
-
-        similar = (
-            self.queryset.filter(filters)
-            .exclude(pk=track.pk)
-            .order_by("-download_count")[:10]
-        )
-        serializer = TrackListSerializer(
-            similar, many=True, context={"request": request}
-        )
-        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def genres(self, request):
@@ -118,28 +153,6 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
-    def languages(self, request):
-        """List distinct languages."""
-        langs = (
-            self.queryset.exclude(language="")
-            .values_list("language", flat=True)
-            .distinct()
-            .order_by("language")
-        )
-        return Response(list(langs))
-
-    @action(detail=False, methods=["get"])
-    def artists(self, request):
-        """List distinct artist names."""
-        artists = (
-            self.queryset.exclude(artist_name="")
-            .values_list("artist_name", flat=True)
-            .distinct()
-            .order_by("artist_name")
-        )
-        return Response(list(artists))
-
-    @action(detail=False, methods=["get"])
     def featured(self, request):
         """List featured tracks."""
         tracks = self.queryset.filter(is_featured=True)[:10]
@@ -152,42 +165,3 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         tracks = self.queryset.order_by("-download_count")[:20]
         serializer = TrackListSerializer(tracks, many=True, context={"request": request})
         return Response(serializer.data)
-
-
-@api_view(["POST"])
-def upload_audio(request):
-    """Upload audio file for a track (protected by UPLOAD_SECRET)."""
-    secret = request.headers.get("X-Upload-Secret", "")
-    expected = os.environ.get("UPLOAD_SECRET", "")
-    if not expected or secret != expected:
-        return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
-
-    title = request.data.get("title")
-    audio = request.FILES.get("audio")
-    if not title or not audio:
-        return Response({"error": "title and audio required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Find or create track
-    track = Track.objects.filter(title=title).first()
-    if not track:
-        genre_slug = request.data.get("genre", "")
-        mood_slug = request.data.get("mood", "")
-        genre = Genre.objects.filter(slug=genre_slug).first()
-        mood = Mood.objects.filter(slug=mood_slug).first()
-        track = Track.objects.create(
-            title=title,
-            artist_name=request.data.get("artist_name", ""),
-            language=request.data.get("language", "English"),
-            genre=genre,
-            mood=mood,
-            bpm=int(request.data.get("bpm", 0)) or None,
-            duration=int(request.data.get("duration", 28)),
-            lyrics=request.data.get("lyrics", ""),
-            description=request.data.get("description", ""),
-            tags=f"{genre_slug}, {mood_slug}",
-            is_active=True,
-        )
-
-    track.audio_file = audio
-    track.save()
-    return Response({"status": "ok", "id": str(track.id), "title": track.title})

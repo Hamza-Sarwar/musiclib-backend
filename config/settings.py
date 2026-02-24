@@ -19,20 +19,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.sitemaps",
     # Third party
     "rest_framework",
     "corsheaders",
     "django_filters",
     # Local
     "tracks",
-    "accounts",
 ]
 
 # ─── Middleware ──────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -71,10 +68,9 @@ DATABASES = {
     }
 }
 
-# PostgreSQL via DATABASE_URL (production)
-if os.getenv("DATABASE_URL"):
-    import dj_database_url
-    DATABASES = {"default": dj_database_url.parse(os.getenv("DATABASE_URL"))}
+# Uncomment for PostgreSQL:
+# import dj_database_url
+# DATABASES = {"default": dj_database_url.parse(os.getenv("DATABASE_URL"))}
 
 # ─── Auth ───────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
@@ -93,7 +89,6 @@ USE_TZ = True
 # ─── Static & Media ────────────────────────────────────
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -109,9 +104,6 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
     ],
@@ -122,11 +114,21 @@ REST_FRAMEWORK = {
 
 # ─── CORS ───────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("CORS_ALLOWED_ORIGINS", os.getenv("FRONTEND_URL", "http://localhost:3000")).split(",")
-    if origin.strip()
+    os.getenv("FRONTEND_URL", "http://localhost:3000"),
 ]
-CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL", "False") == "True"
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "range",
+]
+CORS_EXPOSE_HEADERS = [
+    "accept-ranges",
+    "content-range",
+    "content-length",
+    "content-disposition",
+]
 
 # ─── JWT (for Phase 2 - user auth) ─────────────────────
 SIMPLE_JWT = {
